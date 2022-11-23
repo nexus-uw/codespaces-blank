@@ -15,10 +15,11 @@ import { Topic, } from 'aws-cdk-lib/aws-sns'
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions'
 
 import { AmmobinApiStack } from './ammobin-api-stack'
-import { LOG_RETENTION, Stage, TEST_LAMBDA_NAME, REFRESH_HOURS, Region, RUNTIME } from './constants'
+import { LOG_RETENTION, Stage, TEST_LAMBDA_NAME, REFRESH_HOURS, Region, RUNTIME, ARCH } from './constants'
 import { CloudwatchScheduleEvent } from './CloudWatchScheduleEvent'
 import { exportLambdaLogsToLogger, regionToAWSRegion } from './helper'
 import { AmmobinImagesStack } from './ammobin-images-stack'
+import { Architecture } from 'aws-cdk-lib/aws-lambda'
 
 interface IAmmobinCdkStackProps extends cdk.StackProps {
   publicUrl: string,
@@ -110,6 +111,7 @@ export class AmmobinCdkStack extends cdk.Stack {
       code: new lambda.AssetCode(CODE_BASE + 'refresher'),
       handler: 'refresher.handler',
       runtime: RUNTIME,
+      architecture:ARCH,
       timeout: Duration.minutes(3),
       // memorySize: 1024,
       environment: {
@@ -175,6 +177,7 @@ export class AmmobinCdkStack extends cdk.Stack {
       code: new lambda.AssetCode('./dist/lambdas/log-exporter'),
       handler: 'index.handler',
       runtime: RUNTIME,
+      architecture:ARCH,
       timeout: Duration.minutes(2),
       memorySize: 128,
       environment: {
@@ -185,7 +188,7 @@ export class AmmobinCdkStack extends cdk.Stack {
         ES_URL_SECRET_ID: esUrlSecret?.secretArn || ''
       },
       logRetention: RetentionDays.THREE_DAYS,
-      description: 'moves logs from cloudwatch to elasticsearch'
+      description: 'moves logs from cloudwatch to elasticsearch',
     })
     if (is_prod_enabled) {
       esUrlSecret?.grantRead(logExporter)
@@ -195,11 +198,12 @@ export class AmmobinCdkStack extends cdk.Stack {
     const testLambda = new lambda.Function(this, 'testLambda', {
       functionName: TEST_LAMBDA_NAME,
       runtime: RUNTIME,
+      architecture:ARCH,
       timeout: Duration.minutes(2),
       code: new lambda.AssetCode(CODE_BASE + 'test'),
       handler: 'test.handler',
       logRetention: LOG_RETENTION,
-      description: 'runs series of integ tests to make sure that nothing broke in the latest deployment'
+      description: 'runs series of integ tests to make sure that nothing broke in the latest deployment',
     });
 
     [
@@ -292,6 +296,7 @@ export class AmmobinCdkStack extends cdk.Stack {
       code,
       handler: 'worker.handler',
       runtime: RUNTIME,
+      //architecture:ARCH, TODO figure out large worker first
       timeout,
       memorySize,
       environment,
